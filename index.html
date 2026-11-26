@@ -214,12 +214,24 @@
         <thead><tr><th>문항</th><th>정답</th><th>결과</th></tr></thead>
         <tbody id="result-table"></tbody>
       </table>
-      <button id="retry-btn" style="margin-top:20px">다시 달리기</button>
+      <p id="save-status" class="result-msg" style="margin-top:16px"></p>
+      <button id="retry-btn" style="margin-top:8px">다시 달리기</button>
     </div>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+// ============================================================
+// 🔑 3단계: 내 Supabase 프로젝트 정보 (Project Settings → API Keys 에서 복사)
+//   - publishable key(공개용 키)만 넣으세요. secret key는 절대 넣지 않아요!
+// ============================================================
+const SUPABASE_URL = "https://zyvsjeghrzixjdyhepgf.supabase.co";
+const SUPABASE_KEY = "sb_publishable_8asMjOjGv5mi659UElLngw_XR0JvdqS";
+let db = null;
+try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }
+catch (e) { console.warn("Supabase 정보가 아직 없어요:", e.message); }
+
 // ============================================================
 // ✏️ 여기만 바꾸면 내 교과 퀴즈가 됩니다!
 //   q        : 문제 (빈칸은 ___ 로 표시)
@@ -436,16 +448,28 @@ function next() {
   else finish();
 }
 
-// 결과 저장: 지금(1단계)은 이 브라우저에만 저장해요.
-// 3단계에서 이 함수만 바꾸면 Supabase(DB)에 저장되고, 교사 현황판에 나타나요.
-function saveResults(rows) {
+// 결과 저장: 3단계에서는 Supabase(DB)에 저장해요. → 교사 현황판(dashboard.html)에 나타나요.
+// 혹시 몰라 이 브라우저에도 함께 저장해 둡니다.
+async function saveResults(rows) {
   const saved = JSON.parse(localStorage.getItem("quiz_results") || "[]");
   localStorage.setItem("quiz_results", JSON.stringify(saved.concat(rows)));
+
+  if (!db) {
+    $("save-status").textContent = "⚠️ Supabase 정보가 아직 입력되지 않아 이 기기에만 저장했어요.";
+    return;
+  }
+  $("save-status").textContent = "기록 저장 중…";
+  const { error } = await db.from("quiz_results").insert(rows);
+  $("save-status").textContent = error
+    ? "⚠️ 기록 저장에 실패했어요. 선생님께 알려 주세요. (" + error.message + ")"
+    : "✅ 기록이 선생님께 전달됐어요.";
 }
 
 function finish() {
-  const now = new Date().toISOString();
-  saveResults(records.map(r => ({ nickname, ...r, created_at: now })));
+  saveResults(records.map(r => ({
+    nickname, ...r,
+    standard: QUESTIONS.find(q => q.id === r.question_id).standard,
+  })));
 
   const correctCount = records.filter(r => r.correct).length;
   $("score").textContent = `${correctCount} / ${QUESTIONS.length}`;
