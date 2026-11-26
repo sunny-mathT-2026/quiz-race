@@ -8,17 +8,17 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-    background: #f4f6f5; color: #1f2d2b; min-height: 100vh;
-    display: flex; justify-content: center; padding: 24px 16px;
+    background: #eef3f1; color: #1f2d2b; min-height: 100vh;
+    display: flex; justify-content: center; padding: 20px 14px;
   }
-  .wrap { width: 100%; max-width: 640px; }
-  h1 { font-size: 26px; text-align: center; margin-bottom: 6px; }
-  .sub { text-align: center; color: #5b6b68; margin-bottom: 24px; }
+  .wrap { width: 100%; max-width: 680px; }
+  h1 { font-size: 26px; text-align: center; margin-bottom: 4px; }
+  .sub { text-align: center; color: #5b6b68; margin-bottom: 18px; }
   .card {
-    background: #fff; border-radius: 16px; padding: 24px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 16px;
+    background: #fff; border-radius: 16px; padding: 22px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 14px;
   }
-  .hidden { display: none; }
+  .hidden { display: none !important; }
   label { display: block; font-weight: 600; margin-bottom: 8px; }
   input {
     width: 100%; padding: 14px; font-size: 17px; border: 2px solid #d5dedc;
@@ -30,27 +30,53 @@
     border-radius: 12px; cursor: pointer; background: #3f6b66; color: #fff;
   }
   button:hover { background: #335753; }
-  .btn-light { background: #e8eeec; color: #1f2d2b; margin-top: 10px; }
-  .btn-light:hover { background: #dbe4e1; }
 
-  /* 달리기 트랙 */
-  .track {
-    position: relative; height: 64px; background: #e3ebe9; border-radius: 32px;
-    margin-bottom: 8px; overflow: hidden;
+  /* 캐릭터 고르기 */
+  .animals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+  .animal {
+    background: #f4f7f6; color: #1f2d2b; border: 3px solid transparent;
+    padding: 10px 4px; font-size: 14px; font-weight: 600; border-radius: 14px;
   }
-  .track::after {
-    content: "🏁"; position: absolute; right: 12px; top: 50%;
-    transform: translateY(-50%); font-size: 28px;
+  .animal:hover { background: #e8eeec; }
+  .animal .face { display: block; font-size: 38px; margin-bottom: 4px; }
+  .animal.selected { border-color: #e07b39; background: #fff4ec; }
+
+  /* ===== 산길 레이스 ===== */
+  .scene-box {
+    position: relative; border-radius: 18px; overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12); margin-bottom: 10px; background: #bfe3f2;
   }
-  .runner {
-    position: absolute; top: 50%; left: 8px; transform: translateY(-50%) scaleX(-1);
-    font-size: 40px; transition: left 0.6s ease;
+  .scene-box svg { display: block; width: 100%; height: auto; }
+  .hud {
+    position: absolute; top: 10px; left: 12px; right: 12px;
+    display: flex; justify-content: space-between; pointer-events: none;
   }
-  .progress-text { text-align: right; color: #5b6b68; font-size: 14px; margin-bottom: 16px; }
+  .hud span {
+    background: rgba(255,255,255,0.85); border-radius: 20px; padding: 5px 12px;
+    font-size: 14px; font-weight: 700;
+  }
+  .runner-wrap { transition: none; }
+  .runner { font-size: 34px; }
+  .runner.running { animation: hop 0.22s ease-in-out infinite alternate; }
+  .runner.stumble { animation: stumble 0.5s ease-in-out; }
+  @keyframes hop { from { transform: translateY(0); } to { transform: translateY(-7px); } }
+  @keyframes stumble {
+    0%,100% { transform: rotate(0); } 20% { transform: rotate(-18deg); }
+    40% { transform: rotate(14deg); } 60% { transform: rotate(-10deg); } 80% { transform: rotate(6deg); }
+  }
+  .dust { animation: dust 0.6s ease-out forwards; }
+  @keyframes dust { from { opacity: 0.8; transform: scale(0.4); } to { opacity: 0; transform: scale(1.6) translateX(-12px); } }
+  .cloud { animation: drift 40s linear infinite; }
+  .cloud.slow { animation-duration: 65s; }
+  @keyframes drift { from { transform: translateX(-120px); } to { transform: translateX(760px); } }
+  .flag-wave { animation: wave 0.8s ease-in-out infinite alternate; transform-origin: 0 0; transform-box: fill-box; }
+  @keyframes wave { from { transform: skewY(0deg); } to { transform: skewY(-8deg); } }
+  .cp-on { fill: #e07b39; stroke: #fff; }
+  .cp-off { fill: #fff; stroke: #a89170; }
 
   /* 문제 */
   .q-num { color: #e07b39; font-weight: 700; margin-bottom: 8px; }
-  .q-text { font-size: 21px; font-weight: 700; line-height: 1.5; margin-bottom: 20px; }
+  .q-text { font-size: 21px; font-weight: 700; line-height: 1.5; margin-bottom: 18px; }
   .choices { display: grid; gap: 12px; }
   .choice { background: #fff; color: #1f2d2b; border: 2px solid #d5dedc; font-size: 20px; }
   .choice:hover { background: #f1f5f4; }
@@ -72,20 +98,104 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>🏃 맞춤법 퀴즈 달리기</h1>
-  <p class="sub">맞히면 앞으로! 결승선까지 달려 보세요</p>
+  <h1>⛰️ 맞춤법 퀴즈 달리기</h1>
+  <p class="sub">맞히면 산길을 달려 올라가요! 정상의 깃발까지 가 볼까요?</p>
 
   <!-- 시작 화면 -->
   <div id="start-screen" class="card">
+    <label>함께 달릴 친구를 골라요</label>
+    <div class="animals" id="animals"></div>
     <label for="nickname">번호 또는 닉네임 (실명은 쓰지 마세요)</label>
     <input id="nickname" placeholder="예: 3번, 국어쌤" maxlength="12">
     <button id="start-btn">출발! 🏁</button>
   </div>
 
+  <!-- 산길 레이스 (게임·결과 화면에서 보여요) -->
+  <div id="race" class="scene-box hidden">
+    <svg id="scene" viewBox="0 0 640 300" aria-label="산길 레이스">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#8fd0ee"/><stop offset="1" stop-color="#e3f4fb"/>
+        </linearGradient>
+        <linearGradient id="far" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#a7bfd0"/><stop offset="1" stop-color="#c9d9e3"/>
+        </linearGradient>
+        <linearGradient id="mount" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#7fae6a"/><stop offset="1" stop-color="#5b8f4d"/>
+        </linearGradient>
+        <linearGradient id="front" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#6fa35c"/><stop offset="1" stop-color="#4d7f40"/>
+        </linearGradient>
+        <g id="tree">
+          <rect x="-2" y="0" width="4" height="9" fill="#6b4a2b"/>
+          <polygon points="0,-22 -10,2 10,2" fill="#2f6b3a"/>
+          <polygon points="0,-30 -7,-10 7,-10" fill="#3b7d46"/>
+        </g>
+        <g id="pine-small">
+          <rect x="-1.5" y="0" width="3" height="6" fill="#6b4a2b"/>
+          <polygon points="0,-15 -7,1 7,1" fill="#3a7a45"/>
+        </g>
+      </defs>
+
+      <!-- 하늘 -->
+      <rect width="640" height="300" fill="url(#sky)"/>
+      <circle cx="560" cy="58" r="26" fill="#ffe08a"/>
+      <circle cx="560" cy="58" r="38" fill="#ffe08a" opacity="0.25"/>
+      <g class="cloud"><ellipse cx="0" cy="50" rx="34" ry="11" fill="#fff" opacity="0.9"/><ellipse cx="20" cy="43" rx="22" ry="10" fill="#fff" opacity="0.9"/></g>
+      <g class="cloud slow"><ellipse cx="200" cy="85" rx="40" ry="12" fill="#fff" opacity="0.75"/><ellipse cx="222" cy="77" rx="24" ry="11" fill="#fff" opacity="0.75"/></g>
+
+      <!-- 먼 산맥 -->
+      <path d="M0,170 L60,120 L110,150 L180,90 L250,140 L320,100 L400,150 L470,95 L540,135 L600,110 L640,130 L640,300 L0,300 Z" fill="url(#far)"/>
+      <!-- 큰 산 (정상) -->
+      <path d="M40,300 L210,150 L300,110 L380,62 L430,48 L480,70 L560,130 L640,190 L640,300 Z" fill="url(#mount)"/>
+      <path d="M380,62 L430,48 L480,70 L458,78 L440,66 L420,76 L400,70 Z" fill="#f4f8f9"/>
+      <!-- 앞쪽 언덕 -->
+      <path d="M0,240 Q120,200 260,232 T520,226 T640,236 L640,300 L0,300 Z" fill="url(#front)"/>
+
+      <!-- 나무들 -->
+      <use href="#pine-small" x="250" y="150"/><use href="#pine-small" x="268" y="142"/>
+      <use href="#pine-small" x="500" y="118"/><use href="#pine-small" x="520" y="128"/>
+      <use href="#pine-small" x="345" y="102"/><use href="#pine-small" x="160" y="200"/>
+      <use href="#tree" x="30" y="250"/><use href="#tree" x="92" y="262"/>
+      <use href="#tree" x="610" y="250"/><use href="#tree" x="575" y="262"/>
+      <use href="#tree" x="300" y="268"/>
+
+      <!-- 산길 (지그재그로 정상까지) -->
+      <path id="trail-edge" d="M30,272 C140,272 250,262 330,252 S560,236 560,212 S420,190 300,186 S140,172 160,152 S300,128 360,122 S470,110 470,96 S420,74 430,52"
+            fill="none" stroke="#8a6b47" stroke-width="16" stroke-linecap="round" opacity="0.55"/>
+      <path id="trail" d="M30,272 C140,272 250,262 330,252 S560,236 560,212 S420,190 300,186 S140,172 160,152 S300,128 360,122 S470,110 470,96 S420,74 430,52"
+            fill="none" stroke="#e2c99b" stroke-width="10" stroke-linecap="round"/>
+      <path d="M30,272 C140,272 250,262 330,252 S560,236 560,212 S420,190 300,186 S140,172 160,152 S300,128 360,122 S470,110 470,96 S420,74 430,52"
+            fill="none" stroke="#c7a873" stroke-width="1.5" stroke-dasharray="4 7"/>
+
+      <!-- 출발선 -->
+      <text x="14" y="294" font-size="13" font-weight="700" fill="#fff">출발</text>
+      <!-- 체크포인트 (문제 수만큼 자동으로 그려져요) -->
+      <g id="checkpoints"></g>
+      <!-- 정상 깃발 -->
+      <g transform="translate(430,52)">
+        <rect x="-1.5" y="-34" width="3" height="34" fill="#5a4632"/>
+        <path class="flag-wave" d="M1.5,-34 L26,-27 L1.5,-20 Z" fill="#e0453a"/>
+        <text x="-36" y="-6" font-size="12" font-weight="700" fill="#5a4632">정상</text>
+      </g>
+
+      <!-- 먼지 효과가 들어갈 자리 -->
+      <g id="dust-layer"></g>
+      <!-- 달리는 캐릭터 -->
+      <g id="runner-wrap" class="runner-wrap">
+        <g id="runner-flip">
+          <text id="runner" class="runner" text-anchor="middle" y="-2">🐇</text>
+        </g>
+      </g>
+    </svg>
+    <div class="hud">
+      <span id="hud-left">🏃 0 / 0</span>
+      <span id="hud-right">정상까지 0%</span>
+    </div>
+  </div>
+
   <!-- 게임 화면 -->
   <div id="game-screen" class="hidden">
-    <div class="track"><div class="runner" id="runner">🏃</div></div>
-    <p class="progress-text" id="progress-text"></p>
     <div class="card">
       <p class="q-num" id="q-num"></p>
       <p class="q-text" id="q-text"></p>
@@ -139,16 +249,34 @@ const QUESTIONS = [
     standard: "[국어] 한글 맞춤법", tip: "役割(역할)이라 '역할'이 맞아요." },
   { id: 10, q: "급식 후에 ___를 했다.", choices: ["설거지", "설겆이"], answer: "설거지",
     standard: "[국어] 한글 맞춤법", tip: "표준어는 '설거지'예요. '설겆이'는 옛 표기예요." },
+  { id: 11, q: "선생님은 학생들에게 수학을 ___.", choices: ["가르친다", "가리킨다"], answer: "가르친다",
+    standard: "[국어] 어휘", tip: "지식을 알려 주는 것은 '가르치다', 손가락으로 방향을 짚는 것은 '가리키다'예요." },
+  { id: 12, q: "미안해, ___ 그런 건 아니야.", choices: ["일부러", "일부로"], answer: "일부러",
+    standard: "[국어] 한글 맞춤법", tip: "'일부로'는 없는 말이에요. '일부러'가 맞아요." },
+];
+
+// 고를 수 있는 동물 친구들 (emoji와 이름을 바꾸거나 더 넣어도 돼요)
+const ANIMALS = [
+  { face: "🐇", name: "토끼" },
+  { face: "🦊", name: "여우" },
+  { face: "🐿️", name: "다람쥐" },
+  { face: "🐢", name: "거북이" },
 ];
 
 // ------------------------------------------------------------
 // 아래부터는 게임 동작 코드예요. (바꾸지 않아도 됩니다)
 // ------------------------------------------------------------
 const $ = (id) => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
 let nickname = "";
+let animal = ANIMALS[0];
 let current = 0;
 let records = [];      // 이번 판 기록: { question_id, correct, time_ms }
 let questionStart = 0;
+let position = 0;      // 지금 캐릭터가 있는 산길 위치 (0 ~ 1)
+
+const trail = $("trail");
+const trailLength = trail.getTotalLength();
 
 function shuffle(arr) {
   const a = [...arr];
@@ -162,16 +290,102 @@ function shuffle(arr) {
 function show(screen) {
   ["start-screen", "game-screen", "result-screen"].forEach(s =>
     $(s).classList.toggle("hidden", s !== screen));
+  $("race").classList.toggle("hidden", screen === "start-screen");
 }
 
-function moveRunner() {
+// ---------- 캐릭터 고르기 ----------
+function drawAnimals() {
+  $("animals").innerHTML = "";
+  ANIMALS.forEach(a => {
+    const btn = document.createElement("button");
+    btn.className = "animal" + (a === animal ? " selected" : "");
+    btn.innerHTML = `<span class="face">${a.face}</span>${a.name}`;
+    btn.onclick = () => { animal = a; drawAnimals(); };
+    $("animals").appendChild(btn);
+  });
+}
+
+// ---------- 산길 그리기 ----------
+function drawCheckpoints() {
+  const g = $("checkpoints");
+  g.innerHTML = "";
+  QUESTIONS.forEach((_, i) => {
+    const p = trail.getPointAtLength(trailLength * (i + 1) / QUESTIONS.length);
+    if (i === QUESTIONS.length - 1) return;   // 마지막은 정상 깃발
+    const c = document.createElementNS(NS, "circle");
+    c.setAttribute("cx", p.x); c.setAttribute("cy", p.y); c.setAttribute("r", 5);
+    c.setAttribute("stroke-width", 2);
+    c.setAttribute("class", "cp-off");
+    c.id = "cp-" + i;
+    g.appendChild(c);
+  });
+}
+
+function placeRunner(t, facingRight) {
+  const p = trail.getPointAtLength(trailLength * t);
+  $("runner-wrap").setAttribute("transform", `translate(${p.x},${p.y})`);
+  // 이모지 동물은 보통 왼쪽을 보고 있어서, 오른쪽으로 갈 때 뒤집어요
+  $("runner-flip").setAttribute("transform", facingRight ? "scale(-1,1)" : "scale(1,1)");
+}
+
+function puffDust(x, y) {
+  const d = document.createElementNS(NS, "circle");
+  d.setAttribute("cx", x); d.setAttribute("cy", y + 2); d.setAttribute("r", 6);
+  d.setAttribute("fill", "#d9c29a");
+  d.setAttribute("class", "dust");
+  d.style.transformBox = "fill-box"; d.style.transformOrigin = "center";
+  $("dust-layer").appendChild(d);
+  setTimeout(() => d.remove(), 650);
+}
+
+// 캐릭터가 산길을 따라 target 위치까지 달려가요
+function runTo(target) {
+  const start = position;
+  const duration = 900;
+  const t0 = performance.now();
+  const runner = $("runner");
+  runner.classList.remove("stumble");
+  runner.classList.add("running");
+  let lastDust = 0;
+  let prev = trail.getPointAtLength(trailLength * start);
+
+  function step(now) {
+    const k = Math.min((now - t0) / duration, 1);
+    const eased = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    const t = start + (target - start) * eased;
+    const p = trail.getPointAtLength(trailLength * t);
+    const facingRight = p.x >= prev.x - 0.01;
+    placeRunner(t, facingRight);
+    if (now - lastDust > 120) { puffDust(p.x, p.y); lastDust = now; }
+    prev = p;
+    if (k < 1) requestAnimationFrame(step);
+    else { position = target; runner.classList.remove("running"); }
+  }
+  requestAnimationFrame(step);
+}
+
+function stumble() {
+  const runner = $("runner");
+  runner.classList.remove("stumble");
+  void runner.getBBox();          // 애니메이션을 다시 시작하기 위한 한 줄
+  runner.classList.add("stumble");
+}
+
+function updateHud() {
   const correctCount = records.filter(r => r.correct).length;
-  const percent = correctCount / QUESTIONS.length;
-  // 트랙 왼쪽 끝(8px)에서 결승선 앞(약 85%)까지 이동
-  $("runner").style.left = `calc(8px + ${percent * 85}%)`;
-  $("progress-text").textContent = `맞힌 문제 ${correctCount} / ${QUESTIONS.length}`;
+  $("hud-left").textContent = `${animal.face} ${nickname}  ${correctCount} / ${QUESTIONS.length}`;
+  $("hud-right").textContent = `정상까지 ${Math.round(correctCount / QUESTIONS.length * 100)}%`;
 }
 
+// 캐릭터가 지나간 체크포인트에 불을 켜요
+function lightCheckpoints(correctCount) {
+  for (let i = 0; i < correctCount; i++) {
+    const c = $("cp-" + i);
+    if (c) c.setAttribute("class", "cp-on");
+  }
+}
+
+// ---------- 문제 ----------
 function showQuestion() {
   const item = QUESTIONS[current];
   $("q-num").textContent = `${current + 1}번 문제`;
@@ -203,8 +417,14 @@ function answer(choice, btn) {
 
   const fb = $("feedback");
   fb.className = "feedback " + (correct ? "ok" : "no");
-  fb.innerHTML = (correct ? "⭕ 정답! 앞으로 달려요!<br>" : `❌ 정답은 <b>${item.answer}</b>예요.<br>`) + item.tip;
-  moveRunner();
+  fb.innerHTML = (correct ? `⭕ 정답! ${animal.name}가 산길을 달려 올라가요!<br>` : `❌ 정답은 <b>${item.answer}</b>예요. 잠깐 미끄러졌어요!<br>`) + item.tip;
+
+  // 맞힌 문제 수만큼 산길을 올라가요
+  const correctCount = records.filter(r => r.correct).length;
+  if (correct) runTo(correctCount / QUESTIONS.length);
+  else stumble();
+  lightCheckpoints(correctCount);
+  updateHud();
 
   $("next-btn").textContent = current === QUESTIONS.length - 1 ? "결과 보기 🏁" : "다음 문제 →";
   $("next-btn").classList.remove("hidden");
@@ -230,9 +450,9 @@ function finish() {
   const correctCount = records.filter(r => r.correct).length;
   $("score").textContent = `${correctCount} / ${QUESTIONS.length}`;
   $("result-msg").textContent =
-    correctCount === QUESTIONS.length ? `🏆 ${nickname}님, 완벽한 결승선 통과!` :
-    correctCount >= QUESTIONS.length * 0.7 ? `👏 ${nickname}님, 잘 달렸어요!` :
-    `💪 ${nickname}님, 해설을 보고 한 번 더 달려 볼까요?`;
+    correctCount === QUESTIONS.length ? `🏆 ${nickname}님과 ${animal.name}, 정상 정복!` :
+    correctCount >= QUESTIONS.length * 0.7 ? `👏 ${nickname}님, 정상이 코앞이에요!` :
+    `💪 ${nickname}님, 해설을 보고 한 번 더 올라가 볼까요?`;
 
   $("result-table").innerHTML = records.map((r, i) => {
     const item = QUESTIONS.find(q => q.id === r.question_id);
@@ -247,11 +467,16 @@ function start() {
   if (!nickname) { alert("번호나 닉네임을 입력해 주세요."); return; }
   current = 0;
   records = [];
-  moveRunner();
+  position = 0;
+  $("runner").textContent = animal.face;
+  drawCheckpoints();
+  placeRunner(0, true);
+  updateHud();
   show("game-screen");
   showQuestion();
 }
 
+drawAnimals();
 $("start-btn").onclick = start;
 $("nickname").addEventListener("keydown", e => { if (e.key === "Enter") start(); });
 $("next-btn").onclick = next;
