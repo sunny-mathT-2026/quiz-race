@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>맞춤법 퀴즈 달리기</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: #f4f6f5; color: #1f2d2b; min-height: 100vh;
+    display: flex; justify-content: center; padding: 24px 16px;
+  }
+  .wrap { width: 100%; max-width: 640px; }
+  h1 { font-size: 26px; text-align: center; margin-bottom: 6px; }
+  .sub { text-align: center; color: #5b6b68; margin-bottom: 24px; }
+  .card {
+    background: #fff; border-radius: 16px; padding: 24px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 16px;
+  }
+  .hidden { display: none; }
+  label { display: block; font-weight: 600; margin-bottom: 8px; }
+  input {
+    width: 100%; padding: 14px; font-size: 17px; border: 2px solid #d5dedc;
+    border-radius: 10px; margin-bottom: 16px;
+  }
+  input:focus { outline: none; border-color: #3f6b66; }
+  button {
+    width: 100%; padding: 16px; font-size: 18px; font-weight: 700; border: none;
+    border-radius: 12px; cursor: pointer; background: #3f6b66; color: #fff;
+  }
+  button:hover { background: #335753; }
+  .btn-light { background: #e8eeec; color: #1f2d2b; margin-top: 10px; }
+  .btn-light:hover { background: #dbe4e1; }
+
+  /* 달리기 트랙 */
+  .track {
+    position: relative; height: 64px; background: #e3ebe9; border-radius: 32px;
+    margin-bottom: 8px; overflow: hidden;
+  }
+  .track::after {
+    content: "🏁"; position: absolute; right: 12px; top: 50%;
+    transform: translateY(-50%); font-size: 28px;
+  }
+  .runner {
+    position: absolute; top: 50%; left: 8px; transform: translateY(-50%) scaleX(-1);
+    font-size: 40px; transition: left 0.6s ease;
+  }
+  .progress-text { text-align: right; color: #5b6b68; font-size: 14px; margin-bottom: 16px; }
+
+  /* 문제 */
+  .q-num { color: #e07b39; font-weight: 700; margin-bottom: 8px; }
+  .q-text { font-size: 21px; font-weight: 700; line-height: 1.5; margin-bottom: 20px; }
+  .choices { display: grid; gap: 12px; }
+  .choice { background: #fff; color: #1f2d2b; border: 2px solid #d5dedc; font-size: 20px; }
+  .choice:hover { background: #f1f5f4; }
+  .choice.correct { background: #e3f4e8; border-color: #3a9b5c; }
+  .choice.wrong { background: #fbe6e2; border-color: #d65a45; }
+  .feedback { margin-top: 16px; padding: 14px; border-radius: 10px; line-height: 1.6; }
+  .feedback.ok { background: #e3f4e8; }
+  .feedback.no { background: #fbe6e2; }
+
+  /* 결과 */
+  .score { font-size: 48px; font-weight: 800; text-align: center; color: #3f6b66; }
+  .result-msg { text-align: center; margin: 8px 0 20px; color: #5b6b68; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td { padding: 10px 8px; border-bottom: 1px solid #e3ebe9; text-align: left; }
+  th { color: #5b6b68; font-weight: 600; }
+  .ox-o { color: #3a9b5c; font-weight: 700; }
+  .ox-x { color: #d65a45; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏃 맞춤법 퀴즈 달리기</h1>
+  <p class="sub">맞히면 앞으로! 결승선까지 달려 보세요</p>
+
+  <!-- 시작 화면 -->
+  <div id="start-screen" class="card">
+    <label for="nickname">번호 또는 닉네임 (실명은 쓰지 마세요)</label>
+    <input id="nickname" placeholder="예: 3번, 국어쌤" maxlength="12">
+    <button id="start-btn">출발! 🏁</button>
+  </div>
+
+  <!-- 게임 화면 -->
+  <div id="game-screen" class="hidden">
+    <div class="track"><div class="runner" id="runner">🏃</div></div>
+    <p class="progress-text" id="progress-text"></p>
+    <div class="card">
+      <p class="q-num" id="q-num"></p>
+      <p class="q-text" id="q-text"></p>
+      <div class="choices" id="choices"></div>
+      <div id="feedback" class="feedback hidden"></div>
+      <button id="next-btn" class="hidden" style="margin-top:16px">다음 문제 →</button>
+    </div>
+  </div>
+
+  <!-- 결과 화면 -->
+  <div id="result-screen" class="hidden">
+    <div class="card">
+      <p class="score" id="score"></p>
+      <p class="result-msg" id="result-msg"></p>
+      <table>
+        <thead><tr><th>문항</th><th>정답</th><th>결과</th></tr></thead>
+        <tbody id="result-table"></tbody>
+      </table>
+      <button id="retry-btn" style="margin-top:20px">다시 달리기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// ✏️ 여기만 바꾸면 내 교과 퀴즈가 됩니다!
+//   q        : 문제 (빈칸은 ___ 로 표시)
+//   choices  : 보기 (몇 개든 가능)
+//   answer   : 정답 (choices 안의 글자와 똑같이)
+//   standard : 성취기준 (내 교과의 성취기준 코드로 바꾸세요)
+//   tip      : 해설
+// ============================================================
+const QUESTIONS = [
+  { id: 1,  q: "정말 ___ 만났네요!", choices: ["오랜만에", "오랫만에"], answer: "오랜만에",
+    standard: "[국어] 한글 맞춤법", tip: "'오래간만에'가 줄어든 말이라 '오랜만에'가 맞아요." },
+  { id: 2,  q: "시험까지 ___ 남았나요?", choices: ["며칠", "몇일"], answer: "며칠",
+    standard: "[국어] 한글 맞춤법", tip: "'몇일'은 없는 말이에요. 언제나 '며칠'로 써요." },
+  { id: 3,  q: "교감 선생님께 ___를 받았다.", choices: ["결재", "결제"], answer: "결재",
+    standard: "[국어] 어휘", tip: "윗사람의 승인은 '결재', 돈을 치르는 것은 '결제'예요." },
+  { id: 4,  q: "___ 책임을 다하겠습니다. (교사의 자격으로)", choices: ["교사로서", "교사로써"], answer: "교사로서",
+    standard: "[국어] 문법", tip: "자격·신분은 '로서', 수단·도구는 '로써'예요." },
+  { id: 5,  q: "소문이 ___ 퍼졌다.", choices: ["금세", "금새"], answer: "금세",
+    standard: "[국어] 한글 맞춤법", tip: "'금시에'가 줄어든 말이라 '금세'가 맞아요." },
+  { id: 6,  q: "그럼 내일 ___.", choices: ["봬요", "뵈요"], answer: "봬요",
+    standard: "[국어] 한글 맞춤법", tip: "'뵈어요'가 줄어든 말이라 '봬요'가 맞아요." },
+  { id: 7,  q: "복도에서 뛰면 안 ___.", choices: ["돼요", "되요"], answer: "돼요",
+    standard: "[국어] 한글 맞춤법", tip: "'되어요'가 줄면 '돼요'예요. '하'를 넣어 '해요'가 자연스러우면 '돼'!" },
+  { id: 8,  q: "오늘은 ___로 일찍 왔네?", choices: ["웬일", "왠일"], answer: "웬일",
+    standard: "[국어] 한글 맞춤법", tip: "'왠'은 '왠지'에만 써요. 나머지는 모두 '웬'이에요." },
+  { id: 9,  q: "모둠에서 내 ___은 기록하기야.", choices: ["역할", "역활"], answer: "역할",
+    standard: "[국어] 한글 맞춤법", tip: "役割(역할)이라 '역할'이 맞아요." },
+  { id: 10, q: "급식 후에 ___를 했다.", choices: ["설거지", "설겆이"], answer: "설거지",
+    standard: "[국어] 한글 맞춤법", tip: "표준어는 '설거지'예요. '설겆이'는 옛 표기예요." },
+];
+
+// ------------------------------------------------------------
+// 아래부터는 게임 동작 코드예요. (바꾸지 않아도 됩니다)
+// ------------------------------------------------------------
+const $ = (id) => document.getElementById(id);
+let nickname = "";
+let current = 0;
+let records = [];      // 이번 판 기록: { question_id, correct, time_ms }
+let questionStart = 0;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function show(screen) {
+  ["start-screen", "game-screen", "result-screen"].forEach(s =>
+    $(s).classList.toggle("hidden", s !== screen));
+}
+
+function moveRunner() {
+  const correctCount = records.filter(r => r.correct).length;
+  const percent = correctCount / QUESTIONS.length;
+  // 트랙 왼쪽 끝(8px)에서 결승선 앞(약 85%)까지 이동
+  $("runner").style.left = `calc(8px + ${percent * 85}%)`;
+  $("progress-text").textContent = `맞힌 문제 ${correctCount} / ${QUESTIONS.length}`;
+}
+
+function showQuestion() {
+  const item = QUESTIONS[current];
+  $("q-num").textContent = `${current + 1}번 문제`;
+  $("q-text").textContent = item.q;
+  $("feedback").classList.add("hidden");
+  $("next-btn").classList.add("hidden");
+  const box = $("choices");
+  box.innerHTML = "";
+  shuffle(item.choices).forEach(choice => {
+    const btn = document.createElement("button");
+    btn.className = "choice";
+    btn.textContent = choice;
+    btn.onclick = () => answer(choice, btn);
+    box.appendChild(btn);
+  });
+  questionStart = Date.now();
+}
+
+function answer(choice, btn) {
+  const item = QUESTIONS[current];
+  const correct = choice === item.answer;
+  records.push({ question_id: item.id, correct, time_ms: Date.now() - questionStart });
+
+  document.querySelectorAll(".choice").forEach(b => {
+    b.disabled = true;
+    if (b.textContent === item.answer) b.classList.add("correct");
+  });
+  if (!correct) btn.classList.add("wrong");
+
+  const fb = $("feedback");
+  fb.className = "feedback " + (correct ? "ok" : "no");
+  fb.innerHTML = (correct ? "⭕ 정답! 앞으로 달려요!<br>" : `❌ 정답은 <b>${item.answer}</b>예요.<br>`) + item.tip;
+  moveRunner();
+
+  $("next-btn").textContent = current === QUESTIONS.length - 1 ? "결과 보기 🏁" : "다음 문제 →";
+  $("next-btn").classList.remove("hidden");
+}
+
+function next() {
+  current++;
+  if (current < QUESTIONS.length) showQuestion();
+  else finish();
+}
+
+// 결과 저장: 지금(1단계)은 이 브라우저에만 저장해요.
+// 3단계에서 이 함수만 바꾸면 Supabase(DB)에 저장되고, 교사 현황판에 나타나요.
+function saveResults(rows) {
+  const saved = JSON.parse(localStorage.getItem("quiz_results") || "[]");
+  localStorage.setItem("quiz_results", JSON.stringify(saved.concat(rows)));
+}
+
+function finish() {
+  const now = new Date().toISOString();
+  saveResults(records.map(r => ({ nickname, ...r, created_at: now })));
+
+  const correctCount = records.filter(r => r.correct).length;
+  $("score").textContent = `${correctCount} / ${QUESTIONS.length}`;
+  $("result-msg").textContent =
+    correctCount === QUESTIONS.length ? `🏆 ${nickname}님, 완벽한 결승선 통과!` :
+    correctCount >= QUESTIONS.length * 0.7 ? `👏 ${nickname}님, 잘 달렸어요!` :
+    `💪 ${nickname}님, 해설을 보고 한 번 더 달려 볼까요?`;
+
+  $("result-table").innerHTML = records.map((r, i) => {
+    const item = QUESTIONS.find(q => q.id === r.question_id);
+    return `<tr><td>${i + 1}</td><td>${item.answer}</td>
+      <td class="${r.correct ? "ox-o" : "ox-x"}">${r.correct ? "O" : "X"}</td></tr>`;
+  }).join("");
+  show("result-screen");
+}
+
+function start() {
+  nickname = $("nickname").value.trim();
+  if (!nickname) { alert("번호나 닉네임을 입력해 주세요."); return; }
+  current = 0;
+  records = [];
+  moveRunner();
+  show("game-screen");
+  showQuestion();
+}
+
+$("start-btn").onclick = start;
+$("nickname").addEventListener("keydown", e => { if (e.key === "Enter") start(); });
+$("next-btn").onclick = next;
+$("retry-btn").onclick = () => show("start-screen");
+</script>
+</body>
+</html>
