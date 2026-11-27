@@ -45,7 +45,7 @@
 
   /* 레이스 */
   .lane { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .lane .name { width: 90px; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lane .name { width: 130px; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lane .road { position: relative; flex: 1; height: 34px; background: #e3ebe9; border-radius: 17px; }
   .lane .road::after { content: "🏁"; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); }
   .lane .runner { position: absolute; top: 50%; transform: translateY(-50%) scaleX(-1); font-size: 24px; transition: left 0.6s; }
@@ -60,6 +60,11 @@
   .level.mid  { background: #fff1d6; color: #9a6a12; }
   .level.low  { background: #fbe6e2; color: #b2432f; }
   .empty { color: #5b6b68; text-align: center; padding: 24px; }
+  /* 반 고르기 */
+  .ban-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .ban-tabs button { background: #e8eeec; color: #1f2d2b; padding: 9px 16px; border-radius: 20px; }
+  .ban-tabs button.on { background: #3f6b66; color: #fff; }
+  .ban-tabs button small { font-weight: 500; opacity: 0.75; margin-left: 4px; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
 </style>
@@ -90,10 +95,20 @@
       <button id="logout-btn" class="btn-light">로그아웃</button>
     </div>
 
+    <div class="ban-tabs" id="ban-tabs"></div>
+
     <div class="summary">
       <div class="stat"><div class="label">참여 학생</div><div class="value" id="s-students">0</div></div>
       <div class="stat"><div class="label">푼 문항 수</div><div class="value" id="s-answers">0</div></div>
       <div class="stat"><div class="label">전체 정답률</div><div class="value" id="s-rate">-</div></div>
+    </div>
+
+    <div class="card" id="ban-card">
+      <h2>🏫 반별 비교</h2>
+      <table>
+        <thead><tr><th>반</th><th>참여 학생</th><th>푼 문항</th><th>정답률</th><th>수준</th></tr></thead>
+        <tbody id="ban-table"></tbody>
+      </table>
     </div>
 
     <div class="card">
@@ -104,7 +119,7 @@
     <div class="card">
       <h2>👤 학생별 성취 수준</h2>
       <table>
-        <thead><tr><th>번호/닉네임</th><th>푼 문항</th><th>정답률</th><th>수준</th><th>보충이 필요한 성취기준</th></tr></thead>
+        <thead><tr><th>반</th><th>번호</th><th>이름</th><th>푼 문항</th><th>정답률</th><th>수준</th><th>보충이 필요한 성취기준</th></tr></thead>
         <tbody id="student-table"></tbody>
       </table>
     </div>
@@ -180,7 +195,8 @@ async function load() {
   }
   const { data, error } = await query;
   if (error) { $("updated").textContent = "불러오기 실패: " + error.message; return; }
-  render(data || []);
+  allRows = data || [];
+  showBan();
   $("updated").textContent = "마지막 업데이트 " + new Date().toLocaleTimeString("ko-KR");
 }
 
@@ -196,9 +212,80 @@ function group(rows, key) {
   return map;
 }
 
+// ---------- 반별 보기 ----------
+// 학생 이름은 "3반 12번 홍길동" 모양으로 저장돼요. 여기서 반·번호·이름을 다시 나눠요.
+// 이 모양이 아닌 예전 닉네임 기록은 "기타"로 모아요.
+let allRows = [];
+let selectedBan = "all";   // "all" = 전체, "3" = 3반, "etc" = 기타
+try { selectedBan = localStorage.getItem("dashboard_ban") || "all"; } catch (e) {}
+
+function parseName(n) {
+  const m = /^(\d+)반\s*(\d+)번\s*(.*)$/.exec(n || "");
+  return m ? { ban: Number(m[1]), beon: Number(m[2]), irum: m[3] }
+           : { ban: null, beon: null, irum: n || "(없음)" };
+}
+const banKey = (n) => { const p = parseName(n); return p.ban === null ? "etc" : String(p.ban); };
+const banLabel = (k) => k === "all" ? "전체" : k === "etc" ? "기타" : k + "반";
+// 반 → 번호 → 이름 순서로 정렬
+function byBanBeon(a, b) {
+  const x = parseName(a), y = parseName(b);
+  return (x.ban ?? 999) - (y.ban ?? 999) || (x.beon ?? 999) - (y.beon ?? 999) || x.irum.localeCompare(y.irum, "ko");
+}
+
+function drawBanTabs() {
+  const studentsIn = {};   // 반 → 학생 이름 모음
+  allRows.forEach(r => {
+    const k = banKey(r.nickname);
+    (studentsIn[k] = studentsIn[k] || new Set()).add(r.nickname);
+  });
+  const keys = Object.keys(studentsIn)
+    .sort((a, b) => (a === "etc") - (b === "etc") || Number(a) - Number(b));
+  if (selectedBan !== "all" && !studentsIn[selectedBan]) selectedBan = "all";
+  const total = new Set(allRows.map(r => r.nickname)).size;
+  $("ban-tabs").innerHTML = ["all", ...keys].map(k =>
+    `<button data-ban="${k}" class="${k === selectedBan ? "on" : ""}">${banLabel(k)}<small>${k === "all" ? total : studentsIn[k].size}명</small></button>`
+  ).join("");
+  $("ban-tabs").querySelectorAll("button").forEach(b => b.onclick = () => {
+    selectedBan = b.dataset.ban;
+    try { localStorage.setItem("dashboard_ban", selectedBan); } catch (e) {}
+    showBan();
+  });
+}
+
+function showBan() {
+  drawBanTabs();
+  const rows = selectedBan === "all" ? allRows : allRows.filter(r => banKey(r.nickname) === selectedBan);
+  renderBanTable();
+  render(rows);
+}
+
+// 전체 보기일 때만 반끼리 비교하는 표를 보여 줘요
+function renderBanTable() {
+  const show = selectedBan === "all" && allRows.length > 0;
+  $("ban-card").classList.toggle("hidden", !show);
+  if (!show) return;
+  const byBan = {};
+  allRows.forEach(r => {
+    const k = banKey(r.nickname);
+    const b = byBan[k] = byBan[k] || { total: 0, correct: 0, students: new Set() };
+    b.total++; if (r.correct) b.correct++; b.students.add(r.nickname);
+  });
+  $("ban-table").innerHTML = Object.keys(byBan)
+    .sort((a, b) => (a === "etc") - (b === "etc") || Number(a) - Number(b))
+    .map(k => {
+      const b = byBan[k], rate = pct(b.correct, b.total);
+      return `<tr><td><b>${banLabel(k)}</b></td><td>${b.students.size}명</td><td>${b.total}</td><td>${bar(rate)}</td><td>${level(rate)}</td></tr>`;
+    }).join("");
+}
+
 function render(rows) {
   const byStudent = group(rows, "nickname");
   const names = Object.keys(byStudent);
+  // 한 반만 볼 때는 레이스에 "12번 홍길동"처럼 짧게 보여 줘요
+  const shortName = (n) => {
+    const p = parseName(n);
+    return selectedBan === "all" || p.ban === null ? n : `${p.beon}번 ${p.irum}`;
+  };
 
   // 요약
   $("s-students").textContent = names.length;
@@ -208,7 +295,7 @@ function render(rows) {
   if (!rows.length) {
     const empty = '<p class="empty">아직 기록이 없어요. 학생들에게 게임 주소를 알려 주세요!</p>';
     $("race").innerHTML = empty;
-    $("student-table").innerHTML = `<tr><td colspan="5">${empty}</td></tr>`;
+    $("student-table").innerHTML = `<tr><td colspan="7">${empty}</td></tr>`;
     $("standard-table").innerHTML = $("question-table").innerHTML = "";
     return;
   }
@@ -219,22 +306,23 @@ function render(rows) {
     .sort((a, b) => byStudent[b].correct - byStudent[a].correct)
     .map(n => {
       const left = byStudent[n].correct / maxCorrect * 85;
-      return `<div class="lane"><span class="name">${esc(n)}</span>
+      return `<div class="lane"><span class="name" title="${esc(n)}">${esc(shortName(n))}</span>
         <div class="road"><span class="runner" style="left:calc(4px + ${left}%)">🏃</span></div>
         <span style="width:36px;text-align:right">${byStudent[n].correct}</span></div>`;
     }).join("");
 
-  // 학생별
+  // 학생별 (반 → 번호 순서)
   $("student-table").innerHTML = names
-    .sort((a, b) => pct(byStudent[a].correct, byStudent[a].total) - pct(byStudent[b].correct, byStudent[b].total))
+    .sort(byBanBeon)
     .map(n => {
+      const p = parseName(n);
       const s = byStudent[n];
       const rate = pct(s.correct, s.total);
       const stds = group(s.rows, "standard");
       const weak = Object.keys(stds)
         .filter(k => pct(stds[k].correct, stds[k].total) < LEVEL_MID)
         .map(esc).join(", ") || "-";
-      return `<tr><td>${esc(n)}</td><td>${s.total}</td><td>${bar(rate)}</td><td>${level(rate)}</td><td>${weak}</td></tr>`;
+      return `<tr><td>${p.ban ?? "-"}</td><td>${p.beon ?? "-"}</td><td>${esc(p.irum)}</td><td>${s.total}</td><td>${bar(rate)}</td><td>${level(rate)}</td><td>${weak}</td></tr>`;
     }).join("");
 
   // 성취기준별
