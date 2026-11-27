@@ -41,6 +41,9 @@
   .animal .face { display: block; font-size: 38px; margin-bottom: 4px; }
   .animal.selected { border-color: #e07b39; background: #fff4ec; }
 
+  /* 반 · 번호 · 이름 */
+  .who { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 10px; }
+
   /* ===== 산길 레이스 ===== */
   .scene-box {
     position: relative; border-radius: 18px; overflow: hidden;
@@ -118,8 +121,11 @@
   <div id="start-screen" class="card">
     <label>함께 달릴 친구를 골라요</label>
     <div class="animals" id="animals"></div>
-    <label for="nickname">번호 또는 닉네임 (실명은 쓰지 마세요)</label>
-    <input id="nickname" placeholder="예: 3번, 국어쌤" maxlength="12">
+    <div class="who">
+      <div><label for="ban">반</label><input id="ban" type="number" inputmode="numeric" min="1" max="30" placeholder="예: 3"></div>
+      <div><label for="beon">번호</label><input id="beon" type="number" inputmode="numeric" min="1" max="99" placeholder="예: 12"></div>
+      <div><label for="irum">이름</label><input id="irum" placeholder="예: 홍길동" maxlength="10"></div>
+    </div>
     <button id="start-btn">출발! 🏁</button>
   </div>
 
@@ -227,7 +233,7 @@
       </div>
       <p class="my-rank" id="my-rank"></p>
       <table class="rank-table">
-        <thead><tr><th style="text-align:center">순위</th><th>닉네임</th><th>점수</th><th>시간</th></tr></thead>
+        <thead><tr><th style="text-align:center">순위</th><th>이름</th><th>점수</th><th>시간</th></tr></thead>
         <tbody id="rank-table"></tbody>
       </table>
       <p class="rank-note">학생마다 오늘 가장 잘한 판으로 순위를 매겨요. 점수가 같으면 더 빨리 푼 친구가 앞서요.</p>
@@ -554,8 +560,15 @@ function finish() {
 }
 
 function start() {
-  nickname = $("nickname").value.trim();
-  if (!nickname) { alert("번호나 닉네임을 입력해 주세요."); return; }
+  const ban = parseInt($("ban").value, 10);
+  const beon = parseInt($("beon").value, 10);
+  const irum = $("irum").value.replace(/\s+/g, "");
+  if (!(ban > 0))  { alert("반을 입력해 주세요."); $("ban").focus(); return; }
+  if (!(beon > 0)) { alert("번호를 입력해 주세요."); $("beon").focus(); return; }
+  if (!irum)       { alert("이름을 입력해 주세요."); $("irum").focus(); return; }
+  // 예: "3반 12번 홍길동" → 현황판과 순위표에 이 이름으로 나와요
+  nickname = `${ban}반 ${beon}번 ${irum}`;
+  try { localStorage.setItem("quiz_student", JSON.stringify({ ban, beon, irum })); } catch (e) {}
   current = 0;
   records = [];
   position = 0;
@@ -572,7 +585,13 @@ function start() {
 
 drawAnimals();
 $("start-btn").onclick = start;
-$("nickname").addEventListener("keydown", e => { if (e.key === "Enter") start(); });
+// 이 기기에서 지난번에 입력한 반·번호·이름을 다시 채워 줘요
+try {
+  const last = JSON.parse(localStorage.getItem("quiz_student") || "null");
+  if (last) { $("ban").value = last.ban; $("beon").value = last.beon; $("irum").value = last.irum; }
+} catch (e) {}
+["ban", "beon", "irum"].forEach(id =>
+  $(id).addEventListener("keydown", e => { if (e.key === "Enter") start(); }));
 $("next-btn").onclick = next;
 $("retry-btn").onclick = () => show("start-screen");
 $("rank-refresh").onclick = loadRanking;
